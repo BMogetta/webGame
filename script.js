@@ -1,6 +1,6 @@
 window.addEventListener('load', function() {
   //canvas setup
-  const canvas = document.getElementById('canvas1'); //TODO: or try this.doc...
+  const canvas = document.getElementById('canvas1');
   const ctx = canvas.getContext('2d');
   canvas.width = 1500;
   canvas.height = 500;
@@ -109,7 +109,7 @@ window.addEventListener('load', function() {
     draw(context) {
 
       // display hitbox in debug mode
-      if (game.debug) {
+      if (this.game.debug) {
         context.strokeRect(
           this.x,
           this.y,
@@ -127,7 +127,7 @@ window.addEventListener('load', function() {
         this.y,
         this.width,
         this.height
-        );
+      );
       //drawing projectiles
       this.projectiles.forEach( projectile => {
         projectile.draw(context);
@@ -153,18 +153,45 @@ window.addEventListener('load', function() {
       this.markedForDeletion = false;
       this.lives = 5;
       this.score = this.lives;
+      this.frameX = 0;
+      this.frameY = 0;
+      this.maxFrame = 37;
     }
 
     update(){
       this.x += this.speedX;
       // deleting enemys that reach end screen
       if (this.x + this.width < 0) this.markedForDeletion = true;
+
+      // handle sprite animation
+      if (this.frameX < this.maxFrame){
+        this.frameX++;
+      } else {
+        this.frameX = 0;
+      }
     }
 
     draw(context) {
-      context.fillStyle = 'red';
-      context.fillRect(this.x, this.y, this.width, this.height);
-      context.fillStyle = 'black';
+      // display hitbox in debug mode
+      if (this.game.debug) {
+        context.strokeRect(
+          this.x,
+          this.y,
+          this.width,
+          this.height
+        );
+      }
+      context.drawImage(
+        this.image,
+        this.frameX * this.width, //source x
+        this.frameY * this.height, //source y
+        this.width, //source width
+        this.height, //source height
+        this.x, 
+        this.y,
+        this.width,
+        this.height
+      );
       context.font = '20px Helvetica';
       context.fillText(this.lives, this.x, this.y);
     }
@@ -173,10 +200,12 @@ window.addEventListener('load', function() {
   class Angler1 extends Enemy {
     constructor(game){
       super(game);
-      this.width = 228 * 0.2;
-      this.height = 169 * 0.2;
+      this.width = 228;
+      this.height = 169;
       // starting of enemy position between 0 and 90%, offset by the height of the asset
       this.y = Math.random() * (this.game.height * 0.9 - this.height);
+      this.image = document.getElementById('angler1');
+      this.frameY = Math.floor(Math.random() * 3); // select a random angler1 animation row
     }
   }
 
