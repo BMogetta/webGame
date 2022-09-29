@@ -67,9 +67,13 @@ window.addEventListener('load', function() {
       this.height = 190;
       this.x = 20;
       this.y = 100;
+      this.frameX = 0; // cicle through the spritesheet horizontally
+      this.frameY = 0; // determine spritesheet row
+      this.maxFrame = 37;
       this.speedY = 0;
       this.maxSpeed = 2; //chaging this will change the speed of the player
       this.projectiles = [] //hold all current active projectiles
+      this.image = document.getElementById('player');
     }
 
     update(){
@@ -91,6 +95,13 @@ window.addEventListener('load', function() {
       });
       // deleting projectiles that reach screen threshold
       this.projectiles = this.projectiles.filter(projectile => !projectile.markedForDeletion);
+
+      // handle sprite animation
+      if (this.frameX < this.maxFrame){
+        this.frameX++;
+      } else {
+        this.frameX = 0;
+      }
     }
 
     draw(context) {
@@ -101,6 +112,17 @@ window.addEventListener('load', function() {
         this.width,
         this.height
       );
+      context.drawImage(
+        this.image,
+        this.frameX * this.width, //source x
+        this.frameY * this.height, //source y
+        this.width, //source width
+        this.height, //source height
+        this.x, 
+        this.y,
+        this.width,
+        this.height
+        );
       //drawing projectiles
       this.projectiles.forEach( projectile => {
         projectile.draw(context);
