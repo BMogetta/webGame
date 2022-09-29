@@ -42,6 +42,7 @@ window.addEventListener('load', function() {
       this.height = 3;
       this.speed = 3; //projectile speed
       this.markedForDeletion = false;
+      this.image = document.getElementById('projectile');
     }
 
     update(){
@@ -52,8 +53,7 @@ window.addEventListener('load', function() {
     }
 
     draw(context) {
-      context.fillStyle = 'yellow';
-      context.fillRect(this.x, this.y, this.width, this.height);
+      context.drawImage(this.image, this.x, this.y);
     }
   }
 
@@ -78,7 +78,7 @@ window.addEventListener('load', function() {
       this.image = document.getElementById('player');
       this.powerUp = false;
       this.powerUpTimer = 0;
-      this.powerUpLimit = 10; // changing this will change the power up duration
+      this.powerUpLimit = 10000; // changing this will change the power up duration
     }
 
     update(deltaTime){
@@ -93,6 +93,10 @@ window.addEventListener('load', function() {
       }
 
       this.y += this.speedY;
+
+      //  vertical boundaries
+      if (this.y > this.game.height - this.height * 0.5) this.y = this.game.height - this.height * 0.5;
+      else if (this.y < -this.height * 0.5) this.y = - this.height * 0.5;
 
       // handle projectiles
       this.projectiles.forEach( projectile => {
@@ -110,15 +114,16 @@ window.addEventListener('load', function() {
 
       // power up logic
       if (this.powerUp) {
+        
         if (this.powerUpTimer > this.powerUpLimit) { // ending of power up state
           this.powerUpTimer = 0;
           this.powerUp = false;
-          this.frameY= 0 ; // change to normal animation
+          this.frameY = 0 ; // change to normal animation
         } else {
           this.powerUpTimer += deltaTime;
           this.frameY = 1; // change to power up animation
           this.game.ammo += 0.1; // ammo recharge faster
-        }
+        } //TODO: FIX salida instantatea del powerup
       }
     }
 
@@ -156,7 +161,7 @@ window.addEventListener('load', function() {
     // attack comming from the mouth
     shootTop() {
       if (this.game.ammo > 0){ //shoot only when ammo if available
-        this.projectiles.push( new Projectile(this.game, this.x + 80, this.y));
+        this.projectiles.push( new Projectile(this.game, this.x + 80, this.y + 33));
         this.game.ammo--;
       }
       if (this.powerUp) this.shootBottom(); // shoot an additional projectile while in power up state
@@ -165,7 +170,7 @@ window.addEventListener('load', function() {
     // second projectile logic
     shootBottom(){
       if (this.game.ammo > 0){ //shoot only when ammo if available
-        this.projectiles.push( new Projectile(this.game, this.x + 80, this.y +175));
+        this.projectiles.push( new Projectile(this.game, this.x + 85, this.y + 165));
       }
     }
 
@@ -214,6 +219,8 @@ window.addEventListener('load', function() {
           this.width,
           this.height
         );
+        context.font = '20px Helvetica';
+        context.fillText(this.lives, this.x, this.y);
       }
       context.drawImage(
         this.image,
@@ -226,8 +233,6 @@ window.addEventListener('load', function() {
         this.width,
         this.height
       );
-      context.font = '20px Helvetica';
-      context.fillText(this.lives, this.x, this.y);
     }
   }
 
@@ -333,7 +338,8 @@ window.addEventListener('load', function() {
     constructor(game){
       this.game = game;
       this.frontSize = 25;
-      this.fontFamily = 'Helvetica';
+      this.fontFamily = 'Bangers';
+      this.bigFontFamily = 'Nabla';
       this.color = 'white';
     }
 
@@ -345,7 +351,7 @@ window.addEventListener('load', function() {
       context.shadowOffsetX = 2;
       context.shadowOffsetY = 2;
       context.shadowColor = 'black';
-      context.font = this.frontSize + 'px' + this.fontFamily;
+      context.font = `${this.frontSize}px ${this.fontFamily}`;
       
       // score
       context.fillText(`Score: ${this.game.score}`, 20, 40 )
@@ -361,21 +367,21 @@ window.addEventListener('load', function() {
         let message2;
 
         if (this.game.score > this.game.winningScore) {
-          message1 = 'You Win!';
-          message2 = 'Well done!';
+          message1 = 'Victory';
+          message2 = 'Enemies were owned!';
         } else {
-          message1 = 'You Lose!';
-          message2 = 'Try again!';
+          message1 = 'Defeat';
+          message2 = 'Try again, if you dare';
         }
         // displaying gameOver messages
-        context.font = '50px' + this.fontFamily;
-        context.fillText(message1, this.game.width * 0.5, this.game.height * 0.5 - 40);
-        context.font = '25px' + this.fontFamily;
-        context.fillText(message2, this.game.width * 0.5, this.game.height * 0.5 + 40);
+        context.font = `150px ${this.bigFontFamily}`;
+        context.fillText(message1, this.game.width * 0.5, this.game.height * 0.5 - 45);
+        context.font = `75px ${this.fontFamily}`;
+        context.fillText(message2, this.game.width * 0.5, this.game.height * 0.5 + 60);
       }
 
       // ammo
-      if (this.game.player.powerUp) context.fillStyle = '#ffffbd'
+      if (this.game.player.powerUp) context.fillStyle = 'red'
       for (let i = 0; i < this.game.ammo; i++) {
         context.fillRect(20 + 5 * i , 50, 3, 20);
       }
@@ -405,7 +411,7 @@ window.addEventListener('load', function() {
       this.score = 0; // player score
       this.winningScore = 10; //reach this to win, consider adding difficulty
       this.gameTime = 0;
-      this.timeLimit = 15000;
+      this.timeLimit = 50000;
       this.speed = 1; // centralize speed control
       this.debug = true;
     }
@@ -416,6 +422,13 @@ window.addEventListener('load', function() {
       if (!this.gameOver) this.gameTime += deltaTime;
 
       if ( this.gameTime > this.timeLimit ) this.gameOver = true;
+
+      // despanw enemies when game ends TODO: try to make them drop of screen instead of evaporating
+      if (this.gameOver) {
+        this.enemies.forEach(enemy => {
+          enemy.markedForDeletion = true;
+        })
+      }
 
       this.background.layer4.update();
       this.background.update();
