@@ -187,6 +187,30 @@ window.addEventListener('load', function() {
         context.fillRect(20 + 5 * i , 50, 3, 20);
       }
 
+      // timer 
+      const formattedTime = (this.game.gameTime * 0.001 ).toFixed(1)
+      context.fillText(`Timer: ${formattedTime}`, 20, 100);
+
+      // game over messages
+      if (this.game.gameOver) {
+        context.textAlign = 'center';
+        let message1;
+        let message2;
+
+        if (this.game.score > this.game.winningScore) {
+          message1 = 'You Win!';
+          message2 = 'Well done!';
+        } else {
+          message1 = 'You Lose!';
+          message2 = 'Try again!';
+        }
+        // displaying gameOver messages
+        context.font = '50px' + this.fontFamily;
+        context.fillText(message1, this.game.width * 0.5, this.game.height * 0.5 - 40);
+        context.font = '25px' + this.fontFamily;
+        context.fillText(message2, this.game.width * 0.5, this.game.height * 0.5 + 40);
+      }
+
       context.restore();
     }
   }
@@ -210,9 +234,17 @@ window.addEventListener('load', function() {
       this.gameOver = false;
       this.score = 0; // player score
       this.winningScore = 10; //reach this to win, consider adding difficulty
+      this.gameTime = 0;
+      this.timeLimit = 5000;
     }
 
     update(deltaTime) {
+
+      // keeping track of time in current game
+      if (!this.gameOver) this.gameTime += deltaTime;
+
+      if ( this.gameTime > this.timeLimit ) this.gameOver = true;
+
       this.player.update();
 
       // handling ammo time base recharge
@@ -238,7 +270,7 @@ window.addEventListener('load', function() {
             // despawning enemy whos live reach 0 and adding player score
             if (enemy.lives <= 0) {
               enemy.markedForDeletion = true;
-              this.score += enemy.score; // different enemies give different points
+              if (!this.gameOver) this.score += enemy.score; // different enemies give different points
               if (this.score > this.winningScore) this.gameOver = true; // winning condition
             }
           }
