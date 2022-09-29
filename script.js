@@ -1,11 +1,12 @@
 window.addEventListener('load', function() {
   //canvas setup
-  const canvas = this.document.getElementById('canvas1');
+  const canvas = document.getElementById('canvas1'); //TODO: or try this.doc...
   const ctx = canvas.getContext('2d');
   canvas.width = 1500;
   canvas.height = 500;
 
   class InputHandler  {
+    
     constructor(game){
       this.game = game;
       // user press a key
@@ -30,6 +31,7 @@ window.addEventListener('load', function() {
   }
 
   class Projectile {
+
     constructor(game, x, y) {
       this.game = game;
       this.x = x;
@@ -58,6 +60,7 @@ window.addEventListener('load', function() {
   }
 
   class Player {
+
     constructor(game) {
       this.game = game;
       this.width = 120;
@@ -115,11 +118,14 @@ window.addEventListener('load', function() {
   }
 
   class Enemy {
+
     constructor(game){
       this.game = game;
       this.x = this.game.width;
       this.speedX = Math.random() * -1.5 - 0.5; //horizontal speed of enemys
       this.markedForDeletion = false;
+      this.lives = 5;
+      this.score = this.lives;
     }
 
     update(){
@@ -130,7 +136,10 @@ window.addEventListener('load', function() {
 
     draw(context) {
       context.fillStyle = 'red';
-      context.fillRect = (this.x, this.y, this.width, this.height);
+      context.fillRect(this.x, this.y, this.width, this.height);
+      context.fillStyle = 'black';
+      context.font = '20px Helvetica';
+      context.fillText(this.lives, this.x, this.y);
     }
   }
 
@@ -157,15 +166,28 @@ window.addEventListener('load', function() {
       this.game = game;
       this.frontSize = 25;
       this.fontFamily = 'Helvetica';
-      this.color = 'yellow';
+      this.color = 'white';
     }
 
     draw(context){
-      // ammo
+
+      context.save();
+
       context.fillStyle = this.color;
+      context.shadowOffsetX = 2;
+      context.shadowOffsetY = 2;
+      context.shadowColor = 'black';
+      context.font = this.frontSize + 'px' + this.fontFamily;
+      
+      // score
+      context.fillText(`Score: ${this.game.score}`, 20, 40 )
+      
+      // ammo
       for (let i = 0; i < this.game.ammo; i++) {
         context.fillRect(20 + 5 * i , 50, 3, 20);
       }
+
+      context.restore();
     }
   }
 
@@ -186,6 +208,8 @@ window.addEventListener('load', function() {
       this.ammoTimer = 0;
       this.ammoInterval = 500; //ammo cooldown time in ms
       this.gameOver = false;
+      this.score = 0; // player score
+      this.winningScore = 10; //reach this to win, consider adding difficulty
     }
 
     update(deltaTime) {
@@ -202,7 +226,25 @@ window.addEventListener('load', function() {
       // handling enemy spanw
       this.enemies.forEach(enemy => {
         enemy.update();
+        // despawning enemy that collide with the player
+        if (this.checkCollision(this.player, enemy)) {
+          enemy.markedForDeletion = true;
+        }
+        // implementing projectile damage to enemies
+        this.player.projectiles.forEach(projectile => {
+          if ( this.checkCollision(projectile, enemy)) {
+            enemy.lives--;
+            projectile.markedForDeletion = true;
+            // despawning enemy whos live reach 0 and adding player score
+            if (enemy.lives <= 0) {
+              enemy.markedForDeletion = true;
+              this.score += enemy.score; // different enemies give different points
+              if (this.score > this.winningScore) this.gameOver = true; // winning condition
+            }
+          }
+        })
       });
+
       this.enemies = this.enemies.filter(enemy => !enemy.markedForDeletion);
       if (this.enemyTimer > this.enemyInterval && !this.gameOver) {
         this.addEnemy();
@@ -210,7 +252,7 @@ window.addEventListener('load', function() {
       } else {
         this.enemyTimer += deltaTime;
       }
-    }
+    } //end of update method
 
     draw(context){
       this.player.draw(context)
@@ -222,6 +264,15 @@ window.addEventListener('load', function() {
 
     addEnemy(){
       this.enemies.push(new Angler1(this));
+    }
+
+    checkCollision(rect1, rect2){ 
+      return ( //if at least 1 statement if false, there is no collision
+        rect1.x < rect2.x + rect2.width &&
+        rect1.x + rect1.width > rect2.x &&
+        rect1.y < rect2.y + rect2.height &&
+        rect1.y + rect1.height > rect2.y 
+      )
     }
   }
 
