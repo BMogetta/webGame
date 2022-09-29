@@ -76,9 +76,12 @@ window.addEventListener('load', function() {
       this.maxSpeed = 2; //chaging this will change the speed of the player
       this.projectiles = [] //hold all current active projectiles
       this.image = document.getElementById('player');
+      this.powerUp = false;
+      this.powerUpTimer = 0;
+      this.powerUpLimit = 10; // changing this will change the power up duration
     }
 
-    update(){
+    update(deltaTime){
 
       // managing player movement
       if (this.game.keys.includes('ArrowUp')){
@@ -104,6 +107,19 @@ window.addEventListener('load', function() {
       } else {
         this.frameX = 0;
       }
+
+      // power up logic
+      if (this.powerUp) {
+        if (this.powerUpTimer > this.powerUpLimit) { // ending of power up state
+          this.powerUpTimer = 0;
+          this.powerUp = false;
+          this.frameY= 0 ; // change to normal animation
+        } else {
+          this.powerUpTimer += deltaTime;
+          this.frameY = 1; // change to power up animation
+          this.game.ammo += 0.1; // ammo recharge faster
+        }
+      }
     }
 
     draw(context) {
@@ -117,6 +133,13 @@ window.addEventListener('load', function() {
           this.height
         );
       }
+
+      // drawing projectiles
+      this.projectiles.forEach( projectile => {
+        projectile.draw(context);
+      });
+
+      // drawing player
       context.drawImage(
         this.image,
         this.frameX * this.width, //source x
@@ -128,19 +151,29 @@ window.addEventListener('load', function() {
         this.width,
         this.height
       );
-      //drawing projectiles
-      this.projectiles.forEach( projectile => {
-        projectile.draw(context);
-      });
     }
 
     // attack comming from the mouth
     shootTop() {
       if (this.game.ammo > 0){ //shoot only when ammo if available
-        this.projectiles.push( new Projectile(this.game, this.x + 30, this.y));
-        console.log(this.projectiles);
+        this.projectiles.push( new Projectile(this.game, this.x + 80, this.y));
         this.game.ammo--;
       }
+      if (this.powerUp) this.shootBottom(); // shoot an additional projectile while in power up state
+    }
+
+    // second projectile logic
+    shootBottom(){
+      if (this.game.ammo > 0){ //shoot only when ammo if available
+        this.projectiles.push( new Projectile(this.game, this.x + 80, this.y +175));
+      }
+    }
+
+    // set up power up state
+    enterPowerUp(){
+      this.powerUpTimer = 0; //refresh timmer if collide with another lucky enemy while in power up state
+      this.powerUp = true;
+      this.game.ammo = this.game.maxAmmo;
     }
   }
 
@@ -151,15 +184,16 @@ window.addEventListener('load', function() {
       this.x = this.game.width;
       this.speedX = Math.random() * -1.5 - 0.5; //horizontal speed of enemys
       this.markedForDeletion = false;
-      this.lives = 5;
-      this.score = this.lives;
       this.frameX = 0;
       this.frameY = 0;
       this.maxFrame = 37;
     }
 
     update(){
-      this.x += this.speedX;
+
+      // moving speed
+      this.x += this.speedX - this.game.speed;
+
       // deleting enemys that reach end screen
       if (this.x + this.width < 0) this.markedForDeletion = true;
 
@@ -198,6 +232,7 @@ window.addEventListener('load', function() {
   }
 
   class Angler1 extends Enemy {
+    
     constructor(game){
       super(game);
       this.width = 228;
@@ -206,6 +241,39 @@ window.addEventListener('load', function() {
       this.y = Math.random() * (this.game.height * 0.9 - this.height);
       this.image = document.getElementById('angler1');
       this.frameY = Math.floor(Math.random() * 3); // select a random angler1 animation row
+      this.lives = 2;
+      this.score = this.lives;
+    }
+  }
+
+  class Angler2 extends Enemy {
+    
+    constructor(game){
+      super(game);
+      this.width = 213;
+      this.height = 165;
+      // starting of enemy position between 0 and 90%, offset by the height of the asset
+      this.y = Math.random() * (this.game.height * 0.9 - this.height);
+      this.image = document.getElementById('angler2');
+      this.frameY = Math.floor(Math.random() * 2); // select a random angler2 animation row
+      this.lives = 3;
+      this.score = this.lives;
+    }
+  }
+
+  class LuckyFish extends Enemy {
+    
+    constructor(game){
+      super(game);
+      this.width = 99;
+      this.height = 95;
+      // starting of enemy position between 0 and 90%, offset by the height of the asset
+      this.y = Math.random() * (this.game.height * 0.9 - this.height);
+      this.image = document.getElementById('lucky');
+      this.frameY = Math.floor(Math.random() * 2); // select a random angler2 animation row
+      this.lives = 3;
+      this.score = 15;
+      this.type = 'lucky';
     }
   }
 
@@ -281,11 +349,6 @@ window.addEventListener('load', function() {
       
       // score
       context.fillText(`Score: ${this.game.score}`, 20, 40 )
-      
-      // ammo
-      for (let i = 0; i < this.game.ammo; i++) {
-        context.fillRect(20 + 5 * i , 50, 3, 20);
-      }
 
       // timer 
       const formattedTime = (this.game.gameTime * 0.001 ).toFixed(1)
@@ -309,6 +372,12 @@ window.addEventListener('load', function() {
         context.fillText(message1, this.game.width * 0.5, this.game.height * 0.5 - 40);
         context.font = '25px' + this.fontFamily;
         context.fillText(message2, this.game.width * 0.5, this.game.height * 0.5 + 40);
+      }
+
+      // ammo
+      if (this.game.player.powerUp) context.fillStyle = '#ffffbd'
+      for (let i = 0; i < this.game.ammo; i++) {
+        context.fillRect(20 + 5 * i , 50, 3, 20);
       }
 
       context.restore();
@@ -336,7 +405,7 @@ window.addEventListener('load', function() {
       this.score = 0; // player score
       this.winningScore = 10; //reach this to win, consider adding difficulty
       this.gameTime = 0;
-      this.timeLimit = 5000;
+      this.timeLimit = 15000;
       this.speed = 1; // centralize speed control
       this.debug = true;
     }
@@ -351,7 +420,7 @@ window.addEventListener('load', function() {
       this.background.layer4.update();
       this.background.update();
 
-      this.player.update();
+      this.player.update(deltaTime);
 
       // handling ammo time base recharge
       if ( this.ammoTimer > this.ammoInterval) {
@@ -367,6 +436,9 @@ window.addEventListener('load', function() {
         // despawning enemy that collide with the player
         if (this.checkCollision(this.player, enemy)) {
           enemy.markedForDeletion = true;
+          // handling collision with normal | lucky enemies
+          if (enemy.type === 'lucky') this.player.enterPowerUp();
+          else this.score--;
         }
         // implementing projectile damage to enemies
         this.player.projectiles.forEach(projectile => {
@@ -403,7 +475,12 @@ window.addEventListener('load', function() {
     }
 
     addEnemy(){
-      this.enemies.push(new Angler1(this));
+
+      const randomize = Math.random();
+      // using random numbers to create random enemies
+      if (randomize < 0.4) this.enemies.push(new Angler1(this));
+      else if (randomize < 0.8) this.enemies.push(new Angler2(this));
+      else this.enemies.push(new LuckyFish(this));
     }
 
     checkCollision(rect1, rect2){ 
