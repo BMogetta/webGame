@@ -53,12 +53,68 @@ window.addEventListener('load', function() {
     }
 
     draw(context) {
-      context.drawImage(this.image, this.x, this.y);
+      
+      // drawing projectile
+      context.drawImage(
+        this.image,
+        this.x, 
+        this.y
+      );
     }
   }
 
   class Particle {
+    
+    const(game, x, y){
+      this.game = game;
+      this.x = x;
+      this.y = y;
+      this.image = document.getElementById('gears');
+      this.frameX = Math.floor(Math.random() * 3); // random particle
+      this.frameY = Math.floor(Math.random() * 3);
+      this.spriteSize = 50;
+      this.sizeModifier = (Math.random() * 0.5 + 0.5).toFixed(1);
+      this.size = this.spriteSize * this.sizeModifier; // random particle size
+      this.speedX = Math.random() * 6 - 3; // random left | right particle falldown
+      this.speedY = Math.random() * -15;
+      this.gravity = 0.5;
+      this.markedForDeletion = false;
+      this.angle = 0; // rotation angle for particles
+      this.va = Math.random() * 0.2 - 0.1; // random angular velocity
+      this.bounced = 0;
+      this.bottomBounceBoundary = Math.random() * 100 + 60; // bouncing point for particles
+    }
 
+    update(){
+      this.angle += this.va;
+      this.speedY += this.gravity;
+      this.x -= this.speedX;
+      this.y += this.speedY
+
+      // delete particles that reach end of screen or fall down of screen
+      if (this.y > this.game.height + this.size || this.x < 0 - this.size) this.markedForDeletion = true;
+
+      // handling particle bouncing
+      if(this.y > this.game.height - this.bottomBounceBoundary && this.bounced < 2) {
+        this.bounced++;
+        this.speedY *= -0.5;
+      }
+    }
+
+    draw(context){
+      // drawing particles
+      context.drawImage(
+        this.image,
+        this.frameX * this.spriteSize, //source x
+        this.frameY * this.spriteSize, //source y
+        this.spriteSize, //source width
+        this.spriteSize, //source height
+        this.x, 
+        this.y,
+        this.size,
+        this.size
+      );
+    }
   }
 
   class Player {
@@ -123,7 +179,7 @@ window.addEventListener('load', function() {
           this.powerUpTimer += deltaTime;
           this.frameY = 1; // change to power up animation
           this.game.ammo += 0.1; // ammo recharge faster
-        } //TODO: FIX salida instantatea del powerup
+        }
       }
     }
 
@@ -400,7 +456,8 @@ window.addEventListener('load', function() {
       this.input = new InputHandler(this);
       this.ui = new UI(this);
       this.keys = []; // to track pressed keys
-      this.enemies = []; // to track enemies+
+      this.enemies = []; // to track enemies
+      this.particles = []; // to track particles
       this.enemyTimer = 0;
       this.enemyInterval = 1000; //enemy cooldown in ms
       this.ammo = 20; // initial ammo
@@ -422,6 +479,10 @@ window.addEventListener('load', function() {
       if (!this.gameOver) this.gameTime += deltaTime;
 
       if ( this.gameTime > this.timeLimit ) this.gameOver = true;
+
+      // handling particles
+      this.particles.forEach(particle => particle.update());
+      this.particles = this.particles.filter(particle => !particle.markedForDeletion);
 
       // despanw enemies when game ends TODO: try to make them drop of screen instead of evaporating
       if (this.gameOver) {
@@ -449,18 +510,35 @@ window.addEventListener('load', function() {
         // despawning enemy that collide with the player
         if (this.checkCollision(this.player, enemy)) {
           enemy.markedForDeletion = true;
+          // fallen particles after player/enemy crash
+          for (let i = 0; i < 10; i++){
+            this.particles.push(new Particle(this, enemy.x + enemy.width * 0.5, enemy.y + enemy.height * 0.5));
+          }
           // handling collision with normal | lucky enemies
           if (enemy.type === 'lucky') this.player.enterPowerUp();
           else this.score--;
         }
+
         // implementing projectile damage to enemies
         this.player.projectiles.forEach(projectile => {
+          
           if ( this.checkCollision(projectile, enemy)) {
+            
             enemy.lives--;
             projectile.markedForDeletion = true;
+            // fallen particles after enemy is hiten
+            this.particles.push(new Particle(this, enemy.x + enemy.width * 0.5, enemy.y + enemy.height * 0.5));
+            
             // despawning enemy whos live reach 0 and adding player score
             if (enemy.lives <= 0) {
+
+              // fallen particles after player/enemy crash
+              for (let i = 0; i < 5; i++){
+                this.particles.push(new Particle(this, enemy.x + enemy.width * 0.5, enemy.y + enemy.height * 0.5));
+              }
+              
               enemy.markedForDeletion = true;
+              
               if (!this.gameOver) this.score += enemy.score; // different enemies give different points
               if (this.score > this.winningScore) this.gameOver = true; // winning condition
             }
@@ -481,6 +559,7 @@ window.addEventListener('load', function() {
       this.background.draw(context);
       this.player.draw(context);
       this.ui.draw(context);
+      this.particles.forEach(particle => particle.draw(context)); //TODO: fix 
       this.enemies.forEach(enemy => {
         enemy.draw(context);
       });

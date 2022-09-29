@@ -1,5 +1,7 @@
 https://www.youtube.com/watch?v=7BHs1BzA4fs&t=75
 
-48:57
+1:51:17
 
-problema de renderizado despues de agregar los enemigos
+crash al golpear un enemigo, se sospecha que es el efecto de las particulas
+
+solucionado eso continuar desde el capitulo 26: rotacion de particulas
