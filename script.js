@@ -11,13 +11,15 @@ window.addEventListener('load', function() {
       this.game = game;
       // user press a key
       window.addEventListener('keydown', (e) => {
-        if (  
+        if (  // move up | down
           ((e.key === 'ArrowUp') || (e.key === 'ArrowDown') ) 
           && (this.game.keys.indexOf(e.key) === -1)
           ){
           this.game.keys.push(e.key);
-        } else if ( e.key === ' ') {
+        } else if ( e.key === ' ') { // shoot
           this.game.player.shootTop();
+        } else if (e.key === 'd') { // enable | disable debug mode
+          this.game.debug = !this.game.debug;
         }
       });
 
@@ -105,13 +107,16 @@ window.addEventListener('load', function() {
     }
 
     draw(context) {
-      context.fillStyle = 'black';
-      context.fillRect(
-        this.x,
-        this.y,
-        this.width,
-        this.height
-      );
+
+      // display hitbox in debug mode
+      if (game.debug) {
+        context.strokeRect(
+          this.x,
+          this.y,
+          this.width,
+          this.height
+        );
+      }
       context.drawImage(
         this.image,
         this.frameX * this.width, //source x
@@ -304,6 +309,7 @@ window.addEventListener('load', function() {
       this.gameTime = 0;
       this.timeLimit = 5000;
       this.speed = 1; // centralize speed control
+      this.debug = true;
     }
 
     update(deltaTime) {
