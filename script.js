@@ -304,7 +304,7 @@ window.addEventListener('load', function() {
       this.width = 228;
       this.height = 169;
       // starting of enemy position between 0 and 90%, offset by the height of the asset
-      this.y = Math.random() * (this.game.height * 0.9 - this.height);
+      this.y = Math.random() * (this.game.height * 0.95 - this.height);
       this.image = document.getElementById('angler1');
       this.frameY = Math.floor(Math.random() * 3); // select a random angler1 animation row
       this.lives = 2;
@@ -319,7 +319,7 @@ window.addEventListener('load', function() {
       this.width = 213;
       this.height = 165;
       // starting of enemy position between 0 and 90%, offset by the height of the asset
-      this.y = Math.random() * (this.game.height * 0.9 - this.height);
+      this.y = Math.random() * (this.game.height * 0.95 - this.height);
       this.image = document.getElementById('angler2');
       this.frameY = Math.floor(Math.random() * 2); // select a random angler2 animation row
       this.lives = 3;
@@ -334,12 +334,47 @@ window.addEventListener('load', function() {
       this.width = 99;
       this.height = 95;
       // starting of enemy position between 0 and 90%, offset by the height of the asset
-      this.y = Math.random() * (this.game.height * 0.9 - this.height);
+      this.y = Math.random() * (this.game.height * 0.95 - this.height);
       this.image = document.getElementById('lucky');
       this.frameY = Math.floor(Math.random() * 2); // select a random angler2 animation row
       this.lives = 3;
       this.score = 15;
       this.type = 'lucky';
+    }
+  }
+
+  class HiveWhale extends Enemy {
+    
+    constructor(game){
+      super(game);
+      this.width = 400;
+      this.height = 227;
+      // starting of enemy position between 0 and 90%, offset by the height of the asset
+      this.y = Math.random() * (this.game.height * 0.95 - this.height);
+      this.image = document.getElementById('hivewhale');
+      this.frameY = 0;
+      this.lives = 15;
+      this.score = this.lives;
+      this.type = 'hive';
+      this.speedX = Math.random() * -1.2 -0.2;
+    }
+  }
+
+  class Drone extends Enemy {
+    
+    constructor(game, x, y){
+      super(game);
+      this.width = 115;
+      this.height = 95;
+      // starting of enemy position between 0 and 90%, offset by the height of the asset
+      this.x = x;
+      this.y = y;
+      this.image = document.getElementById('drone');
+      this.frameY = Math.floor(Math.random() * 2);
+      this.lives = 3;
+      this.score = this.lives;
+      this.type = 'drone';
+      this.speedX = Math.random() * -4.2 -0.5;
     }
   }
 
@@ -395,6 +430,60 @@ window.addEventListener('load', function() {
     }
   }
 
+  class Explosion {
+    
+    constructor(game, x, y) {
+      this.game = game;
+      this.frameX = 0;
+      this.maxFrame = 8;
+      this.spriteHeight = 200;
+      this.fps = 25;
+      this.timer = 0;
+      this.interval = 1000/this.fps;
+      this.markedForDeletion = false;
+    }
+
+    update(deltaTime) {
+      
+      this.x -= this.game.speed;
+
+      if (this.timer > this.interval) {
+        this.frameX++;
+        this.timer = 0;
+      } else {
+        this.timer += deltaTime;
+      }
+      
+      if (this.frameX > this.maxFrame) this.markedForDeletion = true;
+    }
+
+    draw(context){
+      context.drawImage(
+        this.image,
+        this.frameX * this.spriteWidth, //source x
+        0, //source y
+        this.spriteWidth, //source width
+        this.spriteHeight, //source height
+        this.x, 
+        this.y,
+        this.width,
+        this.height
+      );
+    }
+  }
+
+  class SmokeExplosion extends Explosion {
+    
+    constructor(game, x, y) {
+      super(game, x, y);
+      this.image = document.getElementById('smokeExplosion');
+      this.spriteWidth = 200;
+      this.width = this.spriteWidth;
+      this.height = this.spriteHeight;
+      this.x = x - this.width * 0.5;
+      this.y = y - this.height * 0.5;
+    }
+  }
   class UI {
     constructor(game){
       this.game = game;
@@ -463,6 +552,7 @@ window.addEventListener('load', function() {
       this.keys = []; // to track pressed keys
       this.enemies = []; // to track enemies
       this.particles = []; // to track particles
+      this.explosions = []; // to track explosions
       this.enemyTimer = 0;
       this.enemyInterval = 1000; //enemy cooldown in ms
       this.ammo = 20; // initial ammo
@@ -471,7 +561,7 @@ window.addEventListener('load', function() {
       this.ammoInterval = 500; //ammo cooldown time in ms
       this.gameOver = false;
       this.score = 0; // player score
-      this.winningScore = 10; //reach this to win, consider adding difficulty
+      this.winningScore = 100; //reach this to win, consider adding difficulty
       this.gameTime = 0;
       this.timeLimit = 50000;
       this.speed = 1; // centralize speed control
@@ -509,14 +599,19 @@ window.addEventListener('load', function() {
       this.particles.forEach(particle => particle.update());
       this.particles = this.particles.filter(particle => !particle.markedForDeletion);
 
+      // handling explosions
+      this.explosions.forEach(explosion => explosion.update(deltaTime));
+      this.explosions = this.explosions.filter(explosion => !explosion.markedForDeletion);
+
       // handling enemy spanw
       this.enemies.forEach(enemy => {
         enemy.update();
         // despawning enemy that collide with the player
         if (this.checkCollision(this.player, enemy)) {
           enemy.markedForDeletion = true;
+          this.addExplosion(enemy);
           // fallen particles after player/enemy crash
-          for (let i = 0; i < 10; i++){
+          for (let i = 0; i < enemy.score; i++){
             this.particles.push(new Particle(this, enemy.x + enemy.width * 0.5, enemy.y + enemy.height * 0.5));
           }
           // handling collision with normal | lucky enemies
@@ -538,11 +633,24 @@ window.addEventListener('load', function() {
             if (enemy.lives <= 0) {
 
               // fallen particles after player/enemy crash
-              for (let i = 0; i < 5; i++){
+              for (let i = 0; i < enemy.score; i++){
                 this.particles.push(new Particle(this, enemy.x + enemy.width * 0.5, enemy.y + enemy.height * 0.5));
               }
 
               enemy.markedForDeletion = true;
+              this.addExplosion(enemy);
+
+              if (enemy.type === 'hive') {
+                for (let i = 0; i < 5; i++) {
+                  this.enemies.push(
+                    new Drone(
+                      this, 
+                      enemy.x + Math.random() * enemy.width, 
+                      enemy.y + 0.5 * enemy.height
+                    )
+                  );
+                }
+              }
               
               if (!this.gameOver) this.score += enemy.score; // different enemies give different points
               if (this.score > this.winningScore) this.gameOver = true; // winning condition
@@ -566,6 +674,7 @@ window.addEventListener('load', function() {
       this.player.draw(context);
       this.particles.forEach(particle => particle.draw(context));
       this.enemies.forEach(enemy => enemy.draw(context));
+      this.explosions.forEach(explosion => explosion.draw(context));
       this.background.layer4.draw(context);
     }
 
@@ -573,9 +682,16 @@ window.addEventListener('load', function() {
 
       const randomize = Math.random();
       // using random numbers to create random enemies
-      if (randomize < 0.4) this.enemies.push(new Angler1(this));
-      else if (randomize < 0.8) this.enemies.push(new Angler2(this));
+      if (randomize < 0.3) this.enemies.push(new Angler1(this));
+      else if (randomize < 0.6) this.enemies.push(new Angler2(this));
+      else if (randomize < 0.8) this.enemies.push(new HiveWhale(this));
       else this.enemies.push(new LuckyFish(this));
+    }
+
+    addExplosion(enemy){
+      const randomize = Math.random();
+      // using random numbers to create random explosion
+      if (randomize < 1) this.explosions.push(new SmokeExplosion(this, enemy.x + 0.5 * enemy.width, enemy.y + 0.5 * enemy.height));
     }
 
     checkCollision(rect1, rect2){ 
@@ -586,6 +702,7 @@ window.addEventListener('load', function() {
         rect1.y + rect1.height > rect2.y 
       )
     }
+
   }
 
   const game = new Game(canvas.width, canvas.height);
@@ -599,8 +716,8 @@ window.addEventListener('load', function() {
     lastTime = timeStamp;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    game.update(deltaTime);
     game.draw(ctx);
+    game.update(deltaTime);
     requestAnimationFrame(animate);
   }
 
