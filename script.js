@@ -435,8 +435,13 @@ window.addEventListener('load', function() {
     constructor(game, x, y) {
       this.game = game;
       this.frameX = 0;
-      this.maxFrame = 8;
+      this.spriteWidth = 200;
       this.spriteHeight = 200;
+      this.width = this.spriteWidth;
+      this.height = this.spriteHeight;
+      this.x = x - this.width * 0.5;
+      this.y = y - this.height * 0.5;
+      this.maxFrame = 8;
       this.fps = 25;
       this.timer = 0;
       this.interval = 1000/this.fps;
@@ -477,11 +482,14 @@ window.addEventListener('load', function() {
     constructor(game, x, y) {
       super(game, x, y);
       this.image = document.getElementById('smokeExplosion');
-      this.spriteWidth = 200;
-      this.width = this.spriteWidth;
-      this.height = this.spriteHeight;
-      this.x = x - this.width * 0.5;
-      this.y = y - this.height * 0.5;
+    }
+  }
+
+  class FireExplosion extends Explosion {
+    
+    constructor(game, x, y) {
+      super(game, x, y);
+      this.image = document.getElementById('fireExplosion');
     }
   }
   class UI {
@@ -691,7 +699,8 @@ window.addEventListener('load', function() {
     addExplosion(enemy){
       const randomize = Math.random();
       // using random numbers to create random explosion
-      if (randomize < 1) this.explosions.push(new SmokeExplosion(this, enemy.x + 0.5 * enemy.width, enemy.y + 0.5 * enemy.height));
+      if (randomize < 0.5) this.explosions.push(new SmokeExplosion(this, enemy.x + 0.5 * enemy.width, enemy.y + 0.5 * enemy.height));
+      else this.explosions.push(new FireExplosion(this, enemy.x + 0.5 * enemy.width, enemy.y + 0.5 * enemy.height));
     }
 
     checkCollision(rect1, rect2){ 
